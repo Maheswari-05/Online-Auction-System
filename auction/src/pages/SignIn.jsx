@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 const SignIn = ({ onSignIn }) => {
-  const [credentials, setCredentials] = useState({ email: '', password: '' });
+  const [credentials, setCredentials] = useState({ username: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -19,11 +19,19 @@ const SignIn = ({ onSignIn }) => {
     setError('');
 
     try {
-      const success = await onSignIn(credentials);
-      if (success) {
-        navigate('/dashboard');
+      const response = await fetch('http://localhost:5001/signin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(credentials),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        localStorage.setItem('token', data.token); // Save token to localStorage
+        onSignIn(true); // Update authentication state
+        navigate('/dashboard'); // Redirect to dashboard
       } else {
-        setError('Invalid email or password');
+        setError(data.message || 'Invalid credentials');
       }
     } catch (err) {
       setError('An error occurred. Please try again.');
@@ -34,20 +42,18 @@ const SignIn = ({ onSignIn }) => {
 
   return (
     <div style={styles.container}>
-      {/* Gradient Border Wrapper */}
       <div style={styles.gradientBorder}>
-        {/* Sign-In Box */}
         <div style={styles.box}>
           <h2 style={styles.heading}>Sign In</h2>
           <form style={styles.form} onSubmit={handleSubmit}>
             <div className="mb-3">
               <input
-                type="email"
+                type="text"
                 className="form-control"
-                placeholder="Email"
+                placeholder="Username"
                 style={styles.input}
-                name="email"
-                value={credentials.email}
+                name="username"
+                value={credentials.username}
                 onChange={handleChange}
                 required
               />
@@ -78,6 +84,9 @@ const SignIn = ({ onSignIn }) => {
   );
 };
 
+
+
+// Reuse the same styles
 const styles = {
   container: {
     display: 'flex',
@@ -125,7 +134,6 @@ const styles = {
     border: 'none',
     width: '100%',
     marginTop: '1rem',
-    transition: 'opacity 0.3s ease',
   },
   signUpText: {
     textAlign: 'center',

@@ -1,4 +1,3 @@
-// components/AuctionDetails.js - Detail view with bidding functionality
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
@@ -11,61 +10,67 @@ const AuctionDetails = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  // Mock data fetch - in a real app, this would be an API call
+  // Fetch auction details
   useEffect(() => {
-    // Simulate API delay
-    setTimeout(() => {
-      const mockAuction = {
-        id: parseInt(id),
-        title: 'Vintage Watch',
-        description: 'A rare vintage timepiece from the 1950s. Excellent condition with original leather strap and box.',
-        startingBid: 200,
-        currentBid: 250,
-        endDate: new Date(Date.now() + 86400000),
-        seller: 'JohnDoe',
-        status: 'active'
-      };
-      
-      const mockBids = [
-        { id: 1, user: 'User123', amount: 250, date: new Date(Date.now() - 3600000) },
-        { id: 2, user: 'Collector42', amount: 230, date: new Date(Date.now() - 7200000) },
-      ];
-      
-      setAuction(mockAuction);
-      setBids(mockBids);
-      setBidAmount(mockAuction.currentBid + 10); // Set default bid to current + 10
-    }, 500);
+    const fetchAuction = async () => {
+      try {
+        const response = await fetch(`http://localhost:5001/auctions/${id}`);
+        const data = await response.json();
+        if (response.ok) {
+          setAuction(data);
+          setBidAmount(data.currentBid + 10); // Set default bid to current + 10
+        } else {
+          setError(data.message || 'Failed to fetch auction');
+        }
+      } catch (err) {
+        setError('An error occurred. Please try again.');
+      }
+    };
+
+    fetchAuction();
   }, [id]);
 
-  const handleBid = (e) => {
+  const handleBid = async (e) => {
     e.preventDefault();
-    
+
     const bidValue = parseFloat(bidAmount);
     if (isNaN(bidValue)) {
       setError('Please enter a valid bid amount');
       return;
     }
-    
+
     if (bidValue <= auction.currentBid) {
       setError(`Your bid must be higher than the current bid ($${auction.currentBid})`);
       return;
     }
-    
-    // In a real app, this would send the bid to the server
-    const newBid = {
-      id: bids.length + 1,
-      user: 'You',
-      amount: bidValue,
-      date: new Date()
-    };
-    
-    setBids([newBid, ...bids]);
-    setAuction({
-      ...auction,
-      currentBid: bidValue
-    });
-    setError('');
-    alert('Bid placed successfully!');
+
+    try {
+      const response = await fetch(`http://localhost:5001/auctions/${id}/bid`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({ bidAmount: bidValue }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        setError(data.message || 'Failed to place bid');
+        return;
+      }
+
+      const updatedAuction = await response.json();
+      setAuction(updatedAuction);
+      setBids([...bids, { id: bids.length + 1, user: 'You', amount: bidValue, date: new Date() }]);
+      setError('');
+      alert('Bid placed successfully!');
+
+      // Navigate back to the dashboard
+      navigate('/dashboard');
+    } catch (err) {
+      setError('An error occurred. Please try again.');
+    }
   };
 
   if (!auction) {
@@ -88,46 +93,30 @@ const AuctionDetails = () => {
         <div style={styles.gradientBorder}>
           <div style={{ ...styles.box, maxWidth: '100%' }}>
             <div className="mb-3">
-              <button 
+              <button
                 onClick={() => navigate('/dashboard')}
                 className="btn btn-outline-secondary mb-3"
               >
                 &larr; Back to Dashboard
               </button>
             </div>
-            
+
             <div className="row">
               <div className="col-lg-8">
                 <h2 style={styles.heading}>{auction.title}</h2>
-                
                 <div className="card mb-4">
                   <div className="card-body">
                     <h5 className="card-title">Description</h5>
                     <p className="card-text">{auction.description}</p>
-                    
                     <div className="row mt-4">
                       <div className="col-md-6">
-                        <p><strong>Auction ID:</strong> #{auction.id}</p>
-                        <p><strong>Seller:</strong> {auction.seller}</p>
-                        <p>
-                          <strong>Status:</strong>{' '}
-                          <span className="badge bg-success">
-                            Active
-                          </span>
-                        </p>
-                        </div>
-                      <div className="col-md-6">
-                        <p><strong>Starting Bid:</strong> ${auction.startingBid}</p>
                         <p><strong>Current Bid:</strong> ${auction.currentBid}</p>
-                        <p>
-                          <strong>Ends on:</strong>{' '}
-                          {auction.endDate.toLocaleDateString()}
-                        </p>
+                        <p><strong>Ends on:</strong> {new Date(auction.endDate).toLocaleDateString()}</p>
                       </div>
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="card mb-4">
                   <div className="card-body">
                     <h5 className="card-title">Place Your Bid</h5>
@@ -138,16 +127,15 @@ const AuctionDetails = () => {
                         <input
                           type="number"
                           className="form-control"
-                          style={styles.input}
                           value={bidAmount}
                           onChange={(e) => setBidAmount(e.target.value)}
                           min={auction.currentBid + 0.01}
                           step="0.01"
                           required
                         />
-                        <button 
-                          type="submit" 
-                          style={{...styles.button, width: 'auto', marginTop: 0}}
+                        <button
+                          type="submit"
+                          style={{ ...styles.button, width: 'auto', marginTop: 0 }}
                           className="px-4"
                         >
                           <span>Place Bid</span>
@@ -160,26 +148,6 @@ const AuctionDetails = () => {
                   </div>
                 </div>
               </div>
-              
-              <div className="col-lg-4">
-                <div className="card">
-                  <div className="card-header">
-                    <h5 className="mb-0">Bid History</h5>
-                  </div>
-                  <ul className="list-group list-group-flush">
-                    {bids.map(bid => (
-                      <li key={bid.id} className="list-group-item">
-                        <div className="d-flex justify-content-between">
-                          <span><strong>${bid.amount}</strong> by {bid.user}</span>
-                          <small className="text-muted">
-                            {bid.date.toLocaleString()}
-                          </small>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -188,16 +156,7 @@ const AuctionDetails = () => {
   );
 };
 
-// Reusing the same styles object as defined above
 const styles = {
-  /* Same styles as above */
-  container: {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    minHeight: '100vh',
-    backgroundColor: 'linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.7))',
-  },
   gradientBorder: {
     background: 'linear-gradient(45deg, #0ce39a, #69007f, #fc0987)',
     padding: '2px',
@@ -215,15 +174,6 @@ const styles = {
     marginBottom: '1.5rem',
     color: '#333',
   },
-  form: {
-    width: '100%',
-  },
-  input: {
-    borderRadius: '5px',
-    border: '1px solid #ddd',
-    padding: '10px',
-    fontSize: '16px',
-  },
   button: {
     position: 'relative',
     textDecoration: 'none',
@@ -237,8 +187,6 @@ const styles = {
     width: '100%',
     marginTop: '1rem',
   },
-
 };
 
 export default AuctionDetails;
-

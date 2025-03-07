@@ -1,22 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import SignIn from './pages/SignIn';
+import SignUp from './pages/SignUp';
 import Dashboard from './pages/Dashboard';
 import LandingPage from './pages/LandingPage';
-import NewAuction from './pages/NewAuction'; // Import the missing component
-import AuctionDetails from './pages/AuctionDetails'; // Import the missing component
+import NewAuction from './pages/NewAuction';
+import AuctionDetails from './pages/AuctionDetails';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  const handleSignIn = (credentials) => {
-    // Mock authentication - in a real app, this would validate against a backend
-    if (credentials.email && credentials.password) {
+  // Check for a valid token on page load
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
       setIsAuthenticated(true);
-      return true;
     }
-    return false;
+  }, []);
+
+  const handleSignIn = (success) => {
+    setIsAuthenticated(success);
   };
 
   return (
@@ -28,6 +32,7 @@ function App() {
             <Navigate to="/dashboard" /> : 
             <SignIn onSignIn={handleSignIn} />
         } />
+        <Route path="/signup" element={<SignUp />} />
         <Route path="/dashboard" element={
           isAuthenticated ? 
             <Dashboard /> : 

@@ -1,28 +1,59 @@
+import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 const SignUp = () => {
+  const [credentials, setCredentials] = useState({ username: '', password: '' });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setCredentials(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch('http://localhost:5001/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(credentials),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        navigate('/signin'); // Redirect to sign-in page after successful signup
+      } else {
+        setError(data.message || 'Registration failed');
+      }
+    } catch (err) {
+      setError('An error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div style={styles.container}>
-      {/* Gradient Border Wrapper */}
       <div style={styles.gradientBorder}>
-        {/* Sign-Up Box */}
         <div style={styles.box}>
           <h2 style={styles.heading}>Sign Up</h2>
-          <form style={styles.form}>
+          <form style={styles.form} onSubmit={handleSubmit}>
             <div className="mb-3">
               <input
                 type="text"
                 className="form-control"
                 placeholder="Username"
                 style={styles.input}
-              />
-            </div>
-            <div className="mb-3">
-              <input
-                type="email"
-                className="form-control"
-                placeholder="Email"
-                style={styles.input}
+                name="username"
+                value={credentials.username}
+                onChange={handleChange}
+                required
               />
             </div>
             <div className="mb-3">
@@ -31,14 +62,19 @@ const SignUp = () => {
                 className="form-control"
                 placeholder="Password"
                 style={styles.input}
+                name="password"
+                value={credentials.password}
+                onChange={handleChange}
+                required
               />
             </div>
-            <button type="submit" style={styles.button}>
-              <span>Sign Up</span>
+            <button type="submit" style={styles.button} disabled={loading}>
+              {loading ? 'Signing Up...' : 'Sign Up'}
             </button>
+            {error && <p style={{ color: 'red', textAlign: 'center', marginTop: '1rem' }}>{error}</p>}
           </form>
           <p style={styles.signUpText}>
-            Already have an account? <a href="/signin" style={styles.signUpLink}>Sign In</a>
+            Already have an account? <Link to="/signin" style={styles.signUpLink}>Sign In</Link>
           </p>
         </div>
       </div>
@@ -46,27 +82,25 @@ const SignUp = () => {
   );
 };
 
-export default SignUp;
 
-// Reuse the same styles from SignIn
 const styles = {
   container: {
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
     minHeight: '100vh',
-    backgroundColor: '#f8f9fa', // Light background for the page
+    backgroundColor: '#f8f9fa',
   },
   gradientBorder: {
     background: 'linear-gradient(45deg, #0ce39a, #69007f, #fc0987)',
-    padding: '2px', // Border width
-    borderRadius: '12px', // Rounded corners for the border
+    padding: '2px',
+    borderRadius: '12px',
     boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
   },
   box: {
     backgroundColor: '#fff',
     padding: '2rem',
-    borderRadius: '10px', // Slightly smaller radius to fit inside the border
+    borderRadius: '10px',
     width: '100%',
     maxWidth: '400px',
   },
@@ -107,3 +141,5 @@ const styles = {
     textDecoration: 'none',
   },
 };
+
+export default SignUp;

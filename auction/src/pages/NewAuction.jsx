@@ -8,8 +8,10 @@ const NewAuction = () => {
     description: '',
     startingBid: '',
     endDate: '',
-    image: ''
+    image: '',
   });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -17,20 +19,48 @@ const NewAuction = () => {
     setAuction(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // In a real app, this would send data to the server
-    console.log('New auction:', auction);
-    alert('Auction created successfully!');
-    navigate('/dashboard');
+    setLoading(true);
+    setError('');
+
+    // Validate all fields
+    if (!auction.title || !auction.description || !auction.startingBid || !auction.endDate) {
+      setError('All fields are required');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:5001/auctions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(auction),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        navigate('/dashboard'); // Redirect to dashboard after successful creation
+      } else {
+        setError(data.message || 'Failed to create auction');
+      }
+    } catch (err) {
+      setError('An error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
       <Navbar />
       <div className="container py-4">
-        <div >
-          <div style={{  maxWidth: '800px', margin: '0 auto' }}>
+        <div>
+          <div style={{ maxWidth: '800px', margin: '0 auto' }}>
             <h2 style={styles.heading}>Create New Auction</h2>
             <form style={styles.form} onSubmit={handleSubmit}>
               <div className="mb-3">
@@ -46,7 +76,7 @@ const NewAuction = () => {
                   required
                 />
               </div>
-              
+
               <div className="mb-3">
                 <label htmlFor="description" className="form-label" style={styles.label}>Description</label>
                 <textarea
@@ -60,7 +90,7 @@ const NewAuction = () => {
                   required
                 ></textarea>
               </div>
-              
+
               <div className="mb-3">
                 <label htmlFor="startingBid" className="form-label" style={styles.label}>Starting Bid ($)</label>
                 <input
@@ -76,7 +106,7 @@ const NewAuction = () => {
                   required
                 />
               </div>
-              
+
               <div className="mb-3">
                 <label htmlFor="endDate" className="form-label" style={styles.label}>End Date</label>
                 <input
@@ -90,7 +120,7 @@ const NewAuction = () => {
                   required
                 />
               </div>
-              
+
               <div className="mb-3">
                 <label htmlFor="image" className="form-label" style={styles.label}>Image URL (Optional)</label>
                 <input
@@ -103,22 +133,24 @@ const NewAuction = () => {
                   onChange={handleChange}
                 />
               </div>
-              
+
               <div className="d-flex justify-content-between mt-4">
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   style={{ ...styles.button, ...styles.cancelButton }}
                   onClick={() => navigate('/dashboard')}
                 >
                   Cancel
                 </button>
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   style={{ ...styles.button, ...styles.submitButton }}
+                  disabled={loading}
                 >
-                  <span>Create Auction</span>
+                  {loading ? 'Creating...' : 'Create Auction'}
                 </button>
               </div>
+              {error && <p style={{ color: 'red', textAlign: 'center', marginTop: '1rem' }}>{error}</p>}
             </form>
           </div>
         </div>
